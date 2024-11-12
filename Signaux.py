@@ -14,10 +14,10 @@ def f_signal_achat_ichimoku(prix):
   chk=f_chikou(prix)
 
   #Le prix arrête de stagner et s'apprete a monter ou a descendre
-  if chk[0]>kijun[25] and tenkan[25] and SSA[25] and SSB[25]:
-    verif=1
-  if chk[0]<kijun[25] and tenkan[25] and SSA[25] and SSB[25]:
-    verif=-1  
+  if chk[0] > kijun[25] and chk[0] > tenkan[25] and chk[0] > SSA[25] and chk[0] > SSB[25]:
+    verif = 1
+  elif chk[0] < kijun[25] and chk[0] < tenkan[25] and chk[0] < SSA[25] and chk[0] < SSB[25]:
+    verif = -1  
   else:
     verif=0
   signal=0

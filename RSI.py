@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 def f_RSI(prix):
   list_RSI=[]
-  sum_G,sum_L=0.000001,0.000001 # La valeur exacte 0 causerait une erreur dans certains cas, que l'on cherche à éviter
+  sum_G,sum_L=1e-6, 1e-6 # La valeur exacte 0 causerait une erreur dans certains cas, que l'on cherche à éviter
 
   # Initialisation : Calcul de la 1ere valeur de list_RSI
   # On utilise pour ça les formules : 

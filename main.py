@@ -1,53 +1,31 @@
-import tkinter as tk #pour fenetre graphique
+
 from decision import * #importe les differents fichiers
 from donnees import *
 from MACD import *
 import datetime #pour la date
 import pytz
-
+import streamlit as st
+import time 
+import pandas as pd
+from streamlit_autorefresh import st_autorefresh
+import matplotlib.pyplot as plt
 # Algorithme venant extraire les données de Yahoo Finance pour les exploiter. Il fonctionne de la façon suivante: lors de l’exécution on rentre un certain nombre de noms d’entreprises et pour chacune de celles-ci le programme renvoie, en d’actualisant à une fréquence donnée, si le titre est à acheter, à vendre ou s’il faut attendre. Cette indication est accompagnée d'un indice de fiabilité en pourcentage permettant plus précision sur la situation financière actuelle.
 # Ce projet fonctionne en TEMPS REEL, et les décisions sont actualisées à chaque minute (dans la configuration actuelle)
 
 
-# Fonction "principale" qui est répetée toutes les minutes: elle permet de renvoyer la décision ainsi que le gain_potentiel sur la fenetre tkinter. On ne peut pas la déplacer dans un autre fichier car on utilise global dans celle ci
 
-def f_changement(x,y,ent,prix):
-  global gain_en_prcnt  
-  global pB
-  global signal
-  val=0
-  val_var = tk.StringVar()
-  val_var.set(str(val))
-  val_gain = tk.StringVar()
-  val_gain.set(str(gain_en_prcnt))
-  # Affichage de la décision et du résultat sur le canvas on appelle la fonction sur b_ou_s au lieu de val uniquement pour améliorer l'affichage
-  text_val = canvas.create_text(x, y, text=val_var.get(),fill='black')
-  text_gain = canvas.create_text(440,270, text=(val_gain.get()),fill='black')
-  
-  signe=signal
-  signal=f_liste_signe(prix,signe)
-  b_ou_s=f_vendre_ou_acheter(signal)
-  val=b_ou_s[0]+" ("+str(b_ou_s[1])+"%)"
-  if b_ou_s[0]=='buy':
-    pB[ent]=prix[-1][0]
-  if b_ou_s[0]=='sell' and pB[ent]!= 0:
-    pS=prix[-1][0]
-    gain_en_prcnt=gain_en_prcnt+f_gain_potentiel(pB,pS,ent)
-    pB[ent]=0
+def f_changement(ent, prix):
+    """Update signals and gain potential for each company."""
+    global gain_en_prcnt, pB, signal
 
-  val_var.set(str(val))
-  val_gain.set(str(gain_en_prcnt))
-  # Mise à jour du texte affiché :
-  canvas.itemconfigure(text_val, text=val_var.get())
-  canvas.itemconfigure(text_gain, text=val_gain.get())
-  return
+    val, confidence = f_vendre_ou_acheter(signal)
+    if val == 'buy':
+        pB[ent] = prix[-1]
+    elif val == 'sell' and pB[ent] != 0:
+        gain_en_prcnt += f_gain_potentiel(pB[ent], prix[-1], ent)
+        pB[ent] = 0  # Reset the price after selling
 
-
-# Appel de la fonction d'affichage de la courbe de prix de l'entreprise
-def f_afficher_courbe(ent):
-  f_afficher_MACD(import_donnees(ent))
-  return
-
+    return val, confidence
 
  # Fonctions qui permettent d'ajouter ou d'enlever des entreprises a la liste qui elle est globale, il n'y a donc pas besoin de l'avoir en argument (on ajoute sur la console pour l'instant) 
   # Les boutons qui suivent appelle les fonctions d'au-dessus
@@ -68,91 +46,118 @@ def retirer_ent():
     del pB[entre]
     return
 
+def check_market_hours():
+    """Check if the market is open."""
+    date = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
+    heure = date.hour
+    jour = date.weekday()
+    return 9 <= heure <= 16 and jour < 5
+
 
 #Programme principal qui se répète et crée la fenetre graphique
-def main_rep():
-    
-    global listent, gain_en_prcnt, pB
-    
-    canvas.delete('all')
-    print("ca marche")
-    canvas.create_text(133, 30, text='Entreprise',fill='black')
-    canvas.create_text(233, 30, text='Prix',fill='black')
-    canvas.create_text(346, 30, text='Décision (certitude)',fill='black')
-    canvas.create_line(100, 45,400, 45)
-    if gain_en_prcnt>0:
-      canvas.create_rectangle(390,240,490,280,width=3,fill='lightgreen',outline='darkgreen')
-    elif gain_en_prcnt<0:
-      canvas.create_rectangle(390,240,490,280,width=3,fill='lightcoral',outline='red4')
-    else:
-      canvas.create_rectangle(390,240,490,280,width=3,fill='lightgrey',outline='darkgrey')
-    canvas.create_text(440,250, text=('Résultats en %'))
-
-    Y=60
-    for ent in listent:
-      data_prix=import_donnees(ent)
-      f_changement(333,Y,ent,data_prix)
-      canvas.create_line(280, Y-10,280, Y+20,width=2,fill='black')
-      canvas.create_line(180,Y-10,180,Y+20,width=2,fill='black')
-      canvas.create_text(233, Y, text=str(round(data_prix[-1][0],2))+"$",fill='black')
-      canvas.create_text(133, Y, text=ent,fill='black')
-    
-      Y+=30
-    fen.after(60000,main_rep)
-    return
 
 
 # ----- Programme pricipal -----
 
 # création de la fentre et du canvas 
-listent=["AAPL","SNAP","AI"]
-fen = tk.Tk()
-fen.title('∑asyMoney®')
-fen.geometry("600x400")
-pB = {ent: 0 for ent in listent}
-gain_en_prcnt = 0
-val =0
-canvas = tk.Canvas(fen, width=500, height=300,background='white')
-canvas.place(x=100,y=100)
-canvas.pack()
+# Initialize session state variables if they don't exist
+if 'listent' not in st.session_state:
+    st.session_state['listent'] = ["AAPL", "SNAP", "AI"]
+if 'pB' not in st.session_state:
+    st.session_state['pB'] = {ent: 0 for ent in st.session_state['listent']}
+if 'gain_en_prcnt' not in st.session_state:
+    st.session_state['gain_en_prcnt'] = 0
+if 'signal' not in st.session_state:
+    st.session_state['signal'] = []
+if 'data_list' not in st.session_state:
+    st.session_state['data_list'] = []
+st.title("∑asyMoney® Trading Dashboard")
+st_autorefresh(interval=60 * 1000, key="datarefresh")
+# Display current time
+st.write("Current Time (Eastern): ", datetime.datetime.now(tz=pytz.timezone('US/Eastern')).strftime("%Y-%m-%d %H:%M:%S"))
 
+# Check market hours
+market_open = check_market_hours()
+if not market_open:
+    st.warning("The market is currently closed. Please try again during market hours (9 AM - 4 PM ET).")
+st.session_state['data_list'].clear()  # Clear `data_list` each time to prevent duplication
+for ent in st.session_state['listent']:
+    data = import_donnees(ent)  # Replace with your data fetching function
+    if data is not None:
+        # Extract closing prices
+        data_prix = [row[0] for row in data]
 
-# Calcul  de la date et l'heure américaine grâce aux modules datetime et pytz. 
-# Renvoie un message d'erreur si la bourse est fermée (comprend à la fois la bourse américaine)
-date = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
-heure = date.hour
-jour = date.weekday()
+        # Update signals
+        st.session_state['signal'] = f_liste_signe(data, st.session_state['signal'])
+        b_ou_s = f_vendre_ou_acheter(st.session_state['signal'])
+        val = b_ou_s[0] + " (" + str(b_ou_s[1]) + "%)"
+        
+        if b_ou_s[0] == 'buy':
+            st.session_state['pB'][ent] = data[-1][0]
+        if b_ou_s[0] == 'sell' and st.session_state['pB'][ent] != 0:
+            pS = data[-1][0]
+            st.session_state['gain_en_prcnt'] += f_gain_potentiel(st.session_state['pB'], pS, ent)
+            st.session_state['pB'][ent] = 0
 
-#---------------------FOR TESTING PURPOSES---------------------####
+        # Add data entry for the table
+        data_entry = {
+            'Company': ent,
+            'Current Price ($)': data_prix[-1],
+            'Decision': val,
+            'Gain Potential (%)': st.session_state['gain_en_prcnt']
+        }
+        st.session_state['data_list'].append(data_entry)
+    else:
+        st.warning(f"Could not retrieve data for {ent}")
 
+# Display the Summary Table Above the Charts
+if st.session_state['data_list']:
+    df = pd.DataFrame(st.session_state['data_list'])
+    st.subheader("Summary Table")
+    st.dataframe(df)
 
-if False and (heure < 9 or heure > 16 or jour==5 or jour==6):
-  btn = tk.Button(fen, text = 'Réessayer plus tard', bd = '5',command = fen.destroy)
-  btn.pack(side = 'bottom')
-  canvas.create_text(250,100, text='La bourse est actuellement fermée,',fill='black')
-  canvas.create_text(250,120, text='Veuillez relancer le programme lorsque celle-ci sera ouverte.',fill='black')
+# Display Each Company's Price Chart Below the Table
+for ent in st.session_state['listent']:
+    data = import_donnees(ent)
+    if data is not None:
+        data_prix = [row[0] for row in data]
 
-# Si la bourse est ouverte, on crée une fonction qui se repete toutes les minutes.
-# Celle ci s'actualise toutes en supprimant les anciennes données et graphismes pour ne pas qu'ils se superposent.On appelle dans celle ci la fonction f_changement qui affiche la décision
-# la liste d'entreprise est intégrée dans cette fonction car elle permet de rajouter ou enlever une entreprise quand le bouton est pressé
+        # Plot the price chart
+        st.subheader(f"Price Chart for {ent}")
+        min_value, max_value = min(data_prix), max(data_prix)
+
+        plt.figure(figsize=(10, 5))
+        plt.plot(data_prix, label="Price")
+        plt.ylim(min_value, max_value)
+        plt.xlabel("Time")
+        plt.ylabel("Price")
+        plt.legend()
+        st.pyplot(plt)
+        st.markdown("---")
+
+# Sidebar Controls to Add or Remove Companies
+st.sidebar.subheader("Manage Companies")
+new_company = st.sidebar.text_input("Add a Company (Ticker Symbol):")
+if st.sidebar.button("Add") and new_company:
+    if new_company.upper() not in st.session_state['listent']:
+        st.session_state['listent'].append(new_company.upper())
+        st.session_state['pB'][new_company.upper()] = 0
+    else:
+        st.sidebar.warning("Company already exists.")
+
+company_to_remove = st.sidebar.selectbox("Select Company to Remove", st.session_state['listent'])
+if st.sidebar.button("Remove") and company_to_remove:
+    st.session_state['listent'].remove(company_to_remove)
+    st.session_state['pB'].pop(company_to_remove, None)
+
+# Results summary at the bottom of the page
+st.header("Summary of Trading Decisions")
+if st.session_state['gain_en_prcnt'] > 0:
+    st.success(f"Overall Gain Potential: {st.session_state['gain_en_prcnt']}%")
+elif st.session_state['gain_en_prcnt'] < 0:
+    st.error(f"Overall Loss Potential: {st.session_state['gain_en_prcnt']}%")
 else:
-  signal=[]
-  main_rep()
-  
-  b1 = tk.Button(fen, text="Retirer une entreprise",bd='5', command=retirer_ent)
-  b1.place(x=50,y=310)
-  b2 = tk.Button(fen, text="Quitter",bd='5', command=fen.destroy)
-  b2.place(x=255 ,y=310)
-  b3 = tk.Button(fen, text="Ajouter une entreprise",bd='5', command=ajout_ent)
-  b3.place(x=360,y=310)
-  '''b4 = tk.Button(fen, text="Voir",bd='5', command=f_afficher_courbe('AAPL')) #TEST
-  b4.place(x=380,y=150)'''
-fen.mainloop()
-
-
-
-
-
+    st.info("No gain or loss at the moment.")
 # --- VERIFIER QUE CA MARCHE ---
 
 #bugs/ameliorations:
