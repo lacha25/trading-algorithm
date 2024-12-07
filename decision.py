@@ -6,11 +6,13 @@ from Signaux import *
 import math #pour la valeur absolue
 from RSI import *
 from MACD import *
-
+from YfAnalysis import *
+from CurveFitting import *
 
 # Si le programme s'est actualisé plus de 5 fois (donc a tourné au moins 5 minutes), on calcule la valeur du signal d'achat en prenant en compte la valeur précédente
 # On utilise pour cela la même formule que pour l'EMA
 def f_vendre_ou_acheter(signal): 
+  print(signal)
   if len(signal)==5:
     list_signe=[]
     list_signe.append(signal[0])
@@ -35,11 +37,16 @@ def f_vendre_ou_acheter(signal):
     else:
       return "sell",(round(abs(signal[-1]/4*100),2))
 
+#compute global signal: 
+def f_update_signal(prix,signal,ent):
+  coeffIchi,coeffMACD,coeffRSI=1,1,1
+  max_signal=coeffIchi+coeffRSI
 
-def f_update_signal(prix,signal):
-  signal.append(f_signal_achat_ichimoku(prix)+f_decision_achat_MACD_et_RSI(prix))
-  if len(signal)>5:
-    signal.remove(signal[1])
+  newsignal=(coeffIchi*f_signal_ichimoku(prix)+coeffRSI*f_signal_RSI(prix))/max_signal
+  f_yf_analysis(ent)
+  
+  signal.append(newsignal)
+  if len(signal)>5: signal.remove(signal[1])
   return signal
     
 def f_gain_potentiel(prixB,prixS,ent):

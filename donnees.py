@@ -20,6 +20,8 @@ def f_data_to_CSV(d):
 # ----- Fonction d'import des données -----
 # Cette fonction utilise le module importé yfinance pour récupérer les données de prix des titres d'intérêt
 # De nombreux paramètres sont modifiables dans celle-ci comme les entreprises ou titres d'intérêt, la période d'inport et la fréquence
+# the shape of data_prix is data_prix[i][0] = close price, data_prix[i][1] = open price
+#  data_prix[i+1][0] = close price of the next day, data_prix[0]=close price of the first day
 def import_donnees(entreprise):
   data = yf.download(  # or pdr.get_data_yahoo(...
           # tickers list or string as well
@@ -62,4 +64,6 @@ def import_donnees(entreprise):
   for i in range(len(data_prix)) :
     data_prix[i][0]=round(float(data_prix[i][0]),6)
     data_prix[i].append(round(float(data_prixO[i][0]),6))
+  
+ 
   return data_prix

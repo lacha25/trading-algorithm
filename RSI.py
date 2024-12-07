@@ -15,30 +15,36 @@ def f_RSI(prix):
   # --> Moyenne des gains (m_G)= Somme des gains sur 14 périodes (sum_G) / 14
   # --> Moyenne des pertes (m_L) = somme des pertes sur 14 périodes (sum_L) / 14
  
-  for i in range(14,0,-1):
-    if prix[-i-14][0]>prix[-i-15][0]:
-      sum_G+=(prix[-i-14][0]/prix[-i-15][0]-1)*100
-    else:
-      sum_L+=(prix[-i-14][0]/prix[-i-15][0]-1)*100
-  m_G=sum_G/14
-  m_L=sum_L/14
-  RS=m_G/m_L
-  RSI_0=100-(100/(1+RS))
-  list_RSI.append(RSI_0) 
+  for i in range(1, 15):  # First 14 periods
+        change = prix[-i][0] - prix[-i-1][0]
+        if change > 0:
+            sum_G += change
+        else:
+            sum_L += abs(change)
+
+  m_G = sum_G / 14
+  m_L = sum_L / 14
+
+  RS = m_G / m_L  
+  RSI_0 = 100 - (100 / (1 + RS))
+  list_RSI.append(RSI_0)
 
   # : Calcul des 14 valeurs suivantes de list_RSI
-  for i in range(14,0,-1):
-    if prix[-i][0]>prix[-i-1][0]:
-      c_G=(prix[-i][0]/prix[-i-1][0]-1)*100
-      m_G=(m_G*13+c_G)/14
-      m_L*=13/14
-    else:
-      c_L=(prix[-i][0]-prix[-i-1][0]-1)*100
-      m_L=(m_L*13+c_L)/14
-      m_G*=13/14
-    RS=m_G/m_L
-    iRSI=100-(100/(1+RS))
-    list_RSI.append(iRSI)
+  for i in range(15, len(prix)):
+        change = prix[-i][0] - prix[-i-1][0]
+        if change > 0:
+            c_G = change
+            c_L = 0
+        else:
+            c_G = 0
+            c_L = abs(change)
+
+        m_G = (m_G * 13 + c_G) / 14
+        m_L = (m_L * 13 + c_L) / 14
+        RS = m_G / m_L 
+        iRSI = 100 - (100 / (1 + RS))
+        list_RSI.append(iRSI)
+  list_RSI = [rsi / 100 for rsi in list_RSI]
   return list_RSI
 
 # Fonction d'affichage du RSI, mais inutilisable car indépendante de la courbe de prix

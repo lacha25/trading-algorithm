@@ -8,7 +8,7 @@ removal or addition of some criterias.
 each algorithm should return a signal as well, that also fit the previous criterias(modulable)
 
 f1:algorithm return data
-f2:data is anaylsed and converted in a intermediate signal 
+f2:data is anaylsed and converted in a intermediate signal (NEED TO BE BETWEEN -1 and 1)
 f3:global signal is computed
 main: store the global signal
 f4: algorithm to compute the decision

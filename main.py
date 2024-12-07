@@ -9,6 +9,7 @@ import time
 import pandas as pd
 from streamlit_autorefresh import st_autorefresh
 import matplotlib.pyplot as plt
+
 # Algorithme venant extraire les données de Yahoo Finance pour les exploiter. Il fonctionne de la façon suivante: lors de l’exécution on rentre un certain nombre de noms d’entreprises et pour chacune de celles-ci le programme renvoie, en d’actualisant à une fréquence donnée, si le titre est à acheter, à vendre ou s’il faut attendre. Cette indication est accompagnée d'un indice de fiabilité en pourcentage permettant plus précision sur la situation financière actuelle.
 # Ce projet fonctionne en TEMPS REEL, et les décisions sont actualisées à chaque minute (dans la configuration actuelle)
 
@@ -56,7 +57,7 @@ for ent in st.session_state['listent']:
         data_prix = [row[0] for row in data]
 
         # Update signals
-        st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent])
+        st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent],ent)
         b_ou_s = f_vendre_ou_acheter(st.session_state['signal'][ent])
 
         # FOR DISPLAY PURPOSE
