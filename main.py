@@ -12,40 +12,6 @@ import matplotlib.pyplot as plt
 # Algorithme venant extraire les données de Yahoo Finance pour les exploiter. Il fonctionne de la façon suivante: lors de l’exécution on rentre un certain nombre de noms d’entreprises et pour chacune de celles-ci le programme renvoie, en d’actualisant à une fréquence donnée, si le titre est à acheter, à vendre ou s’il faut attendre. Cette indication est accompagnée d'un indice de fiabilité en pourcentage permettant plus précision sur la situation financière actuelle.
 # Ce projet fonctionne en TEMPS REEL, et les décisions sont actualisées à chaque minute (dans la configuration actuelle)
 
-
-
-def f_changement(ent, prix):
-    """Update signals and gain potential for each company."""
-    global gain_en_prcnt, pB, signal
-
-    val, confidence = f_vendre_ou_acheter(signal)
-    if val == 'buy':
-        pB[ent] = prix[-1]
-    elif val == 'sell' and pB[ent] != 0:
-        gain_en_prcnt += f_gain_potentiel(pB[ent], prix[-1], ent)
-        pB[ent] = 0  # Reset the price after selling
-
-    return val, confidence
-
- # Fonctions qui permettent d'ajouter ou d'enlever des entreprises a la liste qui elle est globale, il n'y a donc pas besoin de l'avoir en argument (on ajoute sur la console pour l'instant) 
-  # Les boutons qui suivent appelle les fonctions d'au-dessus
-
-def ajout_ent():
-    global listent, pB
-    entre = input("Rentrez l'entreprise a ajouter \n") 
-    listent.append(entre)
-    pB[entre] = 0
-    print("Veuillez attendre quelques instants avant l'actualisation")
-    return
-
-def retirer_ent(): 
-    global listent, pB
-    entre = input("Rentrez l'entreprise a retirer\n")
-    print("Veuillez attendre quelques instants avant l'actualisation")
-    listent.remove(entre)
-    del pB[entre]
-    return
-
 def check_market_hours():
     """Check if the market is open."""
     date = datetime.datetime.now(tz=pytz.timezone('US/Eastern'))
@@ -56,21 +22,22 @@ def check_market_hours():
 
 #Programme principal qui se répète et crée la fenetre graphique
 
-
-# ----- Programme pricipal -----
-
 # création de la fentre et du canvas 
 # Initialize session state variables if they don't exist
 if 'listent' not in st.session_state:
     st.session_state['listent'] = ["AAPL", "SNAP", "AI"]
+if 'signal' not in st.session_state:
+    st.session_state['signal'] = {company: [] for company in st.session_state['listent']}
+if 'data_list' not in st.session_state:
+    st.session_state['data_list'] = []
+#NOT MANDATORY FOR THE PROGRAM
+#pB = prix d'achat pour traquer les gains potentiels
 if 'pB' not in st.session_state:
     st.session_state['pB'] = {ent: 0 for ent in st.session_state['listent']}
 if 'gain_en_prcnt' not in st.session_state:
-    st.session_state['gain_en_prcnt'] = 0
-if 'signal' not in st.session_state:
-    st.session_state['signal'] = []
-if 'data_list' not in st.session_state:
-    st.session_state['data_list'] = []
+    st.session_state['gain_en_prcnt'] = {ent: 0 for ent in st.session_state['listent']}
+
+
 st.title("∑asyMoney® Trading Dashboard")
 st_autorefresh(interval=60 * 1000, key="datarefresh")
 # Display current time
@@ -81,22 +48,24 @@ market_open = check_market_hours()
 if not market_open:
     st.warning("The market is currently closed. Please try again during market hours (9 AM - 4 PM ET).")
 st.session_state['data_list'].clear()  # Clear `data_list` each time to prevent duplication
+
 for ent in st.session_state['listent']:
-    data = import_donnees(ent)  # Replace with your data fetching function
+    data = import_donnees(ent)  
     if data is not None:
         # Extract closing prices
         data_prix = [row[0] for row in data]
 
         # Update signals
-        st.session_state['signal'] = f_liste_signe(data, st.session_state['signal'])
-        b_ou_s = f_vendre_ou_acheter(st.session_state['signal'])
+        st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent])
+        b_ou_s = f_vendre_ou_acheter(st.session_state['signal'][ent])
+
+        # FOR DISPLAY PURPOSE
         val = b_ou_s[0] + " (" + str(b_ou_s[1]) + "%)"
-        
         if b_ou_s[0] == 'buy':
             st.session_state['pB'][ent] = data[-1][0]
         if b_ou_s[0] == 'sell' and st.session_state['pB'][ent] != 0:
             pS = data[-1][0]
-            st.session_state['gain_en_prcnt'] += f_gain_potentiel(st.session_state['pB'], pS, ent)
+            st.session_state['gain_en_prcnt'][ent] += f_gain_potentiel(st.session_state['pB'][ent], pS, ent)
             st.session_state['pB'][ent] = 0
 
         # Add data entry for the table
@@ -104,7 +73,7 @@ for ent in st.session_state['listent']:
             'Company': ent,
             'Current Price ($)': data_prix[-1],
             'Decision': val,
-            'Gain Potential (%)': st.session_state['gain_en_prcnt']
+            'Gain Potential (%)': st.session_state['gain_en_prcnt'][ent]
         }
         st.session_state['data_list'].append(data_entry)
     else:
@@ -142,6 +111,8 @@ if st.sidebar.button("Add") and new_company:
     if new_company.upper() not in st.session_state['listent']:
         st.session_state['listent'].append(new_company.upper())
         st.session_state['pB'][new_company.upper()] = 0
+        st.session_state['gain_en_prcnt'][new_company.upper()] = 0
+        st.session_state['signal'][new_company.upper()] = []
     else:
         st.sidebar.warning("Company already exists.")
 
@@ -149,8 +120,12 @@ company_to_remove = st.sidebar.selectbox("Select Company to Remove", st.session_
 if st.sidebar.button("Remove") and company_to_remove:
     st.session_state['listent'].remove(company_to_remove)
     st.session_state['pB'].pop(company_to_remove, None)
+    st.session_state['gain_en_prcnt'].pop(company_to_remove, None)
+    st.session_state['signal'].pop(company_to_remove, None)
 
 # Results summary at the bottom of the page
+"""
+#not correct but easy to implement, to be done later 
 st.header("Summary of Trading Decisions")
 if st.session_state['gain_en_prcnt'] > 0:
     st.success(f"Overall Gain Potential: {st.session_state['gain_en_prcnt']}%")
@@ -158,6 +133,7 @@ elif st.session_state['gain_en_prcnt'] < 0:
     st.error(f"Overall Loss Potential: {st.session_state['gain_en_prcnt']}%")
 else:
     st.info("No gain or loss at the moment.")
+"""
 # --- VERIFIER QUE CA MARCHE ---
 
 #bugs/ameliorations:

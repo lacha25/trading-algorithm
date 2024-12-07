@@ -36,7 +36,7 @@ def f_vendre_ou_acheter(signal):
       return "sell",(round(abs(signal[-1]/4*100),2))
 
 
-def f_liste_signe(prix,signal):
+def f_update_signal(prix,signal):
   signal.append(f_signal_achat_ichimoku(prix)+f_decision_achat_MACD_et_RSI(prix))
   if len(signal)>5:
     signal.remove(signal[1])
