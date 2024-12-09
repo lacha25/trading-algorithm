@@ -4,10 +4,10 @@
 # La décision est prise en fonction de la valeur de 'signe', étant la variable gardant une trace de tous les retours des indicateurs
 from Signaux import *
 import math #pour la valeur absolue
-from RSI import *
-from MACD import *
-from YfAnalysis import *
-from CurveFitting import *
+from analysisTools.RSI import *
+from analysisTools.MACD import *
+from analysisTools.YfAnalysis import *
+from analysisTools.CurveFitting import *
 
 # Si le programme s'est actualisé plus de 5 fois (donc a tourné au moins 5 minutes), on calcule la valeur du signal d'achat en prenant en compte la valeur précédente
 # On utilise pour cela la même formule que pour l'EMA
@@ -44,7 +44,6 @@ def f_update_signal(prix,signal,ent):
 
   newsignal=(coeffIchi*f_signal_ichimoku(prix)+coeffRSI*f_signal_RSI(prix))/max_signal
   f_yf_analysis(ent)
-  
   signal.append(newsignal)
   if len(signal)>5: signal.remove(signal[1])
   return signal

@@ -1,6 +1,6 @@
-from RSI import f_RSI
-from MACD import *
-from Ichimoku import*
+from analysisTools.RSI import f_RSI
+from analysisTools.MACD import *
+from analysisTools.Ichimoku import*
 
 # Les 2 fonctions d'interprétation des indicateurs financiers à suivre sont basées sur le même principe: une combinaison de cas possibles, menant dans chaque cas à une modification de la variable signal.
 # Cette variable est dans chaque cas renvoyée par la fonction

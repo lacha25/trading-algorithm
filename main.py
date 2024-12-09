@@ -1,7 +1,6 @@
 
 from decision import * #importe les differents fichiers
 from donnees import *
-from MACD import *
 import datetime #pour la date
 import pytz
 import streamlit as st
@@ -56,7 +55,7 @@ for ent in st.session_state['listent']:
         # Extract closing prices
         data_prix = [row[0] for row in data]
 
-        # Update signals
+        # Update signals (here is done without extraction of closing price)
         st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent],ent)
         b_ou_s = f_vendre_ou_acheter(st.session_state['signal'][ent])
 
