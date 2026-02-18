@@ -39,16 +39,20 @@ def f_vendre_ou_acheter(signal):
 
 #compute global signal: 
 def f_update_signal(prix,signal,ent):
-  coeffIchi,coeffMACD,coeffRSI=1,1,1
-  max_signal=coeffIchi+coeffRSI
+  coeffIchi,coeffMACD,coeffRSI,coeffYF,coeffML=1,1,1,1,1
+  max_signal=coeffIchi+coeffRSI+coeffYF
 
-  newsignal=(coeffIchi*f_signal_ichimoku(prix)+coeffRSI*f_signal_RSI(prix))/max_signal
-  f_yf_analysis(ent)
+  newsignal=(
+    coeffIchi*f_signal_ichimoku(prix)
+    +coeffRSI*f_signal_RSI(prix)+
+    f_yf_analysis(ent)*coeffYF
+    )/max_signal
   signal.append(newsignal)
   if len(signal)>5: signal.remove(signal[1])
   return signal
     
 def f_gain_potentiel(prixB,prixS,ent):
-  gain=round(((prixB[ent]/prixS)-1)*100,2)
+  buy_price = prixB[ent] if isinstance(prixB, dict) else prixB
+  gain=round(((buy_price/prixS)-1)*100,2)
   return gain
   

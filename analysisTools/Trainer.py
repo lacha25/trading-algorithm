@@ -83,7 +83,7 @@ class Trainer:
     def fit(self, training_data, training_labels):
         train_tensor = torch.tensor(training_data, dtype=torch.float32).to(self.device)
         if self.isClassification:
-            label_tensor = torch.from_numpy(training_labels).long().to(self.device)
+            label_tensor = torch.from_numpy(training_labels).long().reshape(-1).to(self.device)
         else:
             label_tensor = torch.tensor(training_labels, dtype=torch.float32).reshape(-1, 1).to(self.device)
         train_dataset = TensorDataset(train_tensor, label_tensor)
