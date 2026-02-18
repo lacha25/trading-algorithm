@@ -4,7 +4,6 @@ from donnees import *
 import datetime #pour la date
 import pytz
 import streamlit as st
-import time 
 import pandas as pd
 from streamlit_autorefresh import st_autorefresh
 import matplotlib.pyplot as plt
@@ -49,35 +48,43 @@ if not market_open:
     st.warning("The market is currently closed. Please try again during market hours (9 AM - 4 PM ET).")
 st.session_state['data_list'].clear()  # Clear `data_list` each time to prevent duplication
 
+ticker_data = {}
 for ent in st.session_state['listent']:
     data = import_donnees(ent)  
-    if data is not None:
-        # Extract closing prices
-        data_prix = [row[0] for row in data]
-
-        # Update signals (here is done without extraction of closing price)
-        st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent],ent)
-        b_ou_s = f_vendre_ou_acheter(st.session_state['signal'][ent])
-
-        # FOR DISPLAY PURPOSE
-        val = b_ou_s[0] + " (" + str(b_ou_s[1]) + "%)"
-        if b_ou_s[0] == 'buy':
-            st.session_state['pB'][ent] = data[-1][0]
-        if b_ou_s[0] == 'sell' and st.session_state['pB'][ent] != 0:
-            pS = data[-1][0]
-            st.session_state['gain_en_prcnt'][ent] += f_gain_potentiel(st.session_state['pB'][ent], pS, ent)
-            st.session_state['pB'][ent] = 0
-
-        # Add data entry for the table
-        data_entry = {
-            'Company': ent,
-            'Current Price ($)': data_prix[-1],
-            'Decision': val,
-            'Gain Potential (%)': st.session_state['gain_en_prcnt'][ent]
-        }
-        st.session_state['data_list'].append(data_entry)
-    else:
+    if not data:
         st.warning(f"Could not retrieve data for {ent}")
+        continue
+
+    ticker_data[ent] = data
+    data_prix = [row[0] for row in data]
+    if not data_prix:
+        st.warning(f"No price rows available for {ent}")
+        continue
+
+    try:
+        st.session_state['signal'][ent] = f_update_signal(data, st.session_state['signal'][ent], ent)
+        b_ou_s = f_vendre_ou_acheter(st.session_state['signal'][ent])
+    except Exception as exc:
+        st.warning(f"Signal computation failed for {ent}: {exc}")
+        continue
+
+    # FOR DISPLAY PURPOSE
+    val = b_ou_s[0] + " (" + str(b_ou_s[1]) + "%)"
+    if b_ou_s[0] == 'buy':
+        st.session_state['pB'][ent] = data[-1][0]
+    if b_ou_s[0] == 'sell' and st.session_state['pB'][ent] != 0:
+        pS = data[-1][0]
+        st.session_state['gain_en_prcnt'][ent] += f_gain_potentiel(st.session_state['pB'][ent], pS, ent)
+        st.session_state['pB'][ent] = 0
+
+    # Add data entry for the table
+    data_entry = {
+        'Company': ent,
+        'Current Price ($)': data_prix[-1],
+        'Decision': val,
+        'Gain Potential (%)': st.session_state['gain_en_prcnt'][ent]
+    }
+    st.session_state['data_list'].append(data_entry)
 
 # Display the Summary Table Above the Charts
 if st.session_state['data_list']:
@@ -86,23 +93,23 @@ if st.session_state['data_list']:
     st.dataframe(df)
 
 # Display Each Company's Price Chart Below the Table
-for ent in st.session_state['listent']:
-    data = import_donnees(ent)
-    if data is not None:
-        data_prix = [row[0] for row in data]
+for ent, data in ticker_data.items():
+    data_prix = [row[0] for row in data]
+    if not data_prix:
+        continue
 
-        # Plot the price chart
-        st.subheader(f"Price Chart for {ent}")
-        min_value, max_value = min(data_prix), max(data_prix)
+    # Plot the price chart
+    st.subheader(f"Price Chart for {ent}")
+    min_value, max_value = min(data_prix), max(data_prix)
 
-        plt.figure(figsize=(10, 5))
-        plt.plot(data_prix, label="Price")
-        plt.ylim(min_value, max_value)
-        plt.xlabel("Time")
-        plt.ylabel("Price")
-        plt.legend()
-        st.pyplot(plt)
-        st.markdown("---")
+    plt.figure(figsize=(10, 5))
+    plt.plot(data_prix, label="Price")
+    plt.ylim(min_value, max_value)
+    plt.xlabel("Time")
+    plt.ylabel("Price")
+    plt.legend()
+    st.pyplot(plt)
+    st.markdown("---")
 
 # Sidebar Controls to Add or Remove Companies
 st.sidebar.subheader("Manage Companies")
@@ -116,12 +123,15 @@ if st.sidebar.button("Add") and new_company:
     else:
         st.sidebar.warning("Company already exists.")
 
-company_to_remove = st.sidebar.selectbox("Select Company to Remove", st.session_state['listent'])
-if st.sidebar.button("Remove") and company_to_remove:
-    st.session_state['listent'].remove(company_to_remove)
-    st.session_state['pB'].pop(company_to_remove, None)
-    st.session_state['gain_en_prcnt'].pop(company_to_remove, None)
-    st.session_state['signal'].pop(company_to_remove, None)
+if st.session_state['listent']:
+    company_to_remove = st.sidebar.selectbox("Select Company to Remove", st.session_state['listent'])
+    if st.sidebar.button("Remove") and company_to_remove:
+        st.session_state['listent'].remove(company_to_remove)
+        st.session_state['pB'].pop(company_to_remove, None)
+        st.session_state['gain_en_prcnt'].pop(company_to_remove, None)
+        st.session_state['signal'].pop(company_to_remove, None)
+else:
+    st.sidebar.info("No company to remove.")
 
 # Results summary at the bottom of the page
 """

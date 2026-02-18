@@ -5,9 +5,11 @@
 # On a ensuite une dernière fonction dans cette partie qui permet d'interpreter les différents signaux renvoyés par l'indicateur
 
 def f_Tenkan(prix):
-  m_9=[]
+  if len(prix) < 34:
+    raise ValueError("Not enough price points for Tenkan.")
   list_tenkan=[]
   for j in range(26): 
+    m_9=[]
     for i in range (1,10):
       m_9.append(float(prix[-(i+j)][0]))
     tenkan=(min(m_9)+max(m_9))/2
@@ -16,9 +18,11 @@ def f_Tenkan(prix):
 
 
 def f_Kijun(prix):
-  m_26=[]
+  if len(prix) < 52:
+    raise ValueError("Not enough price points for Kijun.")
   list_kijun=[]
   for j in range(26):
+    m_26=[]
     for i in range (1,27):
       m_26.append(float(prix[-(i+j)][0]))
     kijun=(min(m_26)+max(m_26))/2
@@ -34,9 +38,11 @@ def f_SSA(list_tenkan,list_kijun):
 
 
 def f_SSB(prix):
-  m_52=[]
+  if len(prix) < 103:
+    raise ValueError("Not enough price points for SSB.")
   list_SSB=[]
   for j in range(26):
+    m_52=[]
     for i in range (1,53):
       m_52.append(float(prix[(-26-i-j)][0])) #Decale le prix de 26 chandelles dans le futur
     SSB=(min(m_52)+max(m_52))/2 
@@ -46,6 +52,8 @@ def f_SSB(prix):
 
 # Attention calculable uniquement sur periode n>26 chandelles
 def f_chikou(prix): 
+  if len(prix) < 30:
+    raise ValueError("Not enough price points for Chikou.")
   list_chikou=[]
   for i in range(5):
     list_chikou.append(prix[-26-i][0]) #Decale le prix de 26 chandelles dans le passé
