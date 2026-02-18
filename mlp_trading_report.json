@@ -1,0 +1,32 @@
+{
+  "tickers_requested": 50,
+  "tickers_used": 50,
+  "horizon": 1,
+  "train_samples": 298481,
+  "val_samples": 25100,
+  "test_samples": 13721,
+  "classification_test": {
+    "accuracy": 0.5162160192405801,
+    "f1": 0.5839287952864486,
+    "auc": 0.5091610231030329,
+    "base_positive_rate": 0.5250346064567566
+  },
+  "thresholds": {
+    "low": 0.4,
+    "high": 0.52
+  },
+  "strategy_validation": {
+    "daily_mean_return": 0.00010999167833853034,
+    "daily_sharpe": 0.5576000910228976,
+    "cumulative_return": 0.05417244804997945,
+    "coverage": 0.36159362549800794,
+    "trade_win_rate": 0.5142133098281181
+  },
+  "strategy_test": {
+    "daily_mean_return": 0.00033079336185738283,
+    "daily_sharpe": 1.0156264472714165,
+    "cumulative_return": 0.09271175142107135,
+    "coverage": 0.3430507980467896,
+    "trade_win_rate": 0.5156150414276609
+  }
+}
